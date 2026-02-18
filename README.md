@@ -13,7 +13,15 @@ The **Inventory Ingestion Agent** is responsible for converting unstructured ima
 -   **Structured Output:** Generates strictly formatted JSON data for downstream processing.
 
 See [prompts/inventory_ingestion.md](prompts/inventory_ingestion.md) for the detailed system role and rules.
-See [prompts/inventory_extraction_task.md](prompts/inventory_extraction_task.md) for the specific task instructions and JSON output schema.
+### Visual Merchandiser Agent
+The **Visual Merchandiser Agent** specializes in Virtual Try-On (VTON) visualization.
+
+**Key Capabilities:**
+-   **Style Analysis:** Analyzes garment style to determine appropriate model and setting.
+-   **VTON Generation:** Generates photorealistic on-model images using external tools.
+-   **Contextual Styling:** Matches background and vibe to the specific garment type.
+
+See [prompts/visual_merchandiser.md](prompts/visual_merchandiser.md) for the detailed system role.
 
 ## Setup
 

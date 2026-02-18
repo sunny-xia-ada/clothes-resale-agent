@@ -55,3 +55,14 @@ python src/main.py path/to/image.jpg
 ```
 
 The script will output the structural JSON data to the console.
+
+### Background Removal Tool
+
+Pivot your images to a clean, professional look with the zero-cost background remover.
+
+1.  **Run the tool:**
+    ```bash
+    python src/background_remover.py path/to/raw_image.jpg
+    ```
+    
+    This will create an `output` folder containing the processed image with a solid white background.

@@ -101,7 +101,7 @@ def predict_price_with_gemini(extracted_json, api_key):
         st.error(f"Error predicting price: {e}")
         return None
 
-def generate_copywriting_with_gemini(extracted_json, api_key):
+def generate_copywriting_with_gemini(extracted_json, api_key, is_luxury):
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-2.5-flash')
     
@@ -113,11 +113,8 @@ def generate_copywriting_with_gemini(extracted_json, api_key):
         return None
         
     try:
-        parsed_data = json.loads(extracted_json)
-        brand_tier = parsed_data.get("basics", {}).get("brand_tier", "")
-        
         routing_instruction = ""
-        if brand_tier == "Luxury/Designer":
+        if is_luxury:
             routing_instruction = "\n\nIMPORTANT: Since this is a Luxury/Designer brand, generate ALL 5 descriptions: Poshmark, eBay, Mercari, Vestiaire Collective, and Fashionphile."
         else:
             routing_instruction = "\n\nIMPORTANT: Since this is NOT a Luxury/Designer brand, ONLY generate Poshmark, eBay, and Mercari descriptions. Omit Vestiaire Collective and Fashionphile from the JSON entirely."
@@ -236,6 +233,16 @@ def main():
     # File uploader
     uploaded_file = st.file_uploader("Upload a raw clothing image...", type=["jpg", "jpeg", "png"])
     
+    tier_option = st.radio(
+        "Select Brand Tier Routing:",
+        options=[
+            'Luxury/Designer (Include Vestiaire & Fashionphile)',
+            'Regular/Fast Fashion (Poshmark, eBay, Mercari only)'
+        ],
+        index=1
+    )
+    is_luxury = tier_option == 'Luxury/Designer (Include Vestiaire & Fashionphile)'
+    
     if uploaded_file is not None:
         # Create clear layout
         col1, col2 = st.columns(2)
@@ -293,7 +300,7 @@ def main():
                     st.divider()
                     st.markdown("### ✍️ Platform Copywriting")
                     with st.spinner("🤖 Generating listing descriptions..."):
-                        copy_json = generate_copywriting_with_gemini(json_data, api_key)
+                        copy_json = generate_copywriting_with_gemini(json_data, api_key, is_luxury)
                         if copy_json:
                             try:
                                 copy_data = json.loads(copy_json)

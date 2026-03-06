@@ -176,7 +176,8 @@ def flatten_and_save_data(extracted_json, price_json, copy_json, orig_path, proc
         flat["processed_image_path"] = proc_path
         
         # write to csv
-        csv_file = "inventory.csv"
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        csv_file = os.path.join(base_dir, "inventory.csv")
         file_exists = os.path.isfile(csv_file)
         
         with open(csv_file, 'a', newline='', encoding='utf-8') as f:

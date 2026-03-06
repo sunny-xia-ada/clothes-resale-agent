@@ -4,3 +4,6 @@ Pillow
 rembg
 onnxruntime
 streamlit
+fastapi
+uvicorn
+python-multipart

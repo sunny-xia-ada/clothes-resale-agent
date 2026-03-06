@@ -207,82 +207,71 @@ def flatten_and_save_data(extracted_json, price_json, copy_json, orig_path, proc
 def main():
     st.set_page_config(page_title="Clothes Resale Agent", layout="wide")
     
-    # Inject Clean, Modern High-End Fashion Theme CSS
+    # Inject Cute Pink Loopy Theme CSS
     st.markdown("""
     <style>
-    /* Google Fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:ital,wght@0,600;1,600&display=swap');
+    /* Global Pink Theme & Loopy Font */
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap');
     
-    /* Document Wide Config */
     .stApp {
-        background-color: #FAFAFA;
-        font-family: 'Inter', sans-serif;
-        color: #333333;
+        background-color: #FFF0F5;
+        font-family: 'Nunito', sans-serif;
     }
     
     h1, h2, h3, h4, h5, h6 {
-        font-family: 'Playfair Display', serif;
-        color: #1A1A1A !important;
-        font-weight: 600;
-        letter-spacing: -0.5px;
+        font-family: 'Fredoka One', cursive;
+        color: #FF5A92 !important;
     }
     
     /* Primary Action Buttons */
     .stButton>button {
-        background-color: #1A1A1A;
+        background-color: #FFB6C1;
         color: white;
-        font-family: 'Inter', sans-serif;
-        font-weight: 600;
-        border-radius: 8px;
-        border: 1px solid #1A1A1A;
+        font-family: 'Fredoka One', cursive;
+        border-radius: 25px;
+        border: 3px solid #FF99D6;
         transition: all 0.3s ease;
         padding: 10px 24px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-size: 0.95rem;
+        font-size: 1.1rem;
+        box-shadow: 0px 4px 6px rgba(255, 182, 193, 0.4);
     }
     .stButton>button:hover {
-        background-color: #333333;
-        border-color: #333333;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        background-color: #FF99CC;
+        border-color: #FF66A3;
+        transform: scale(1.05);
         color: white;
     }
     
-    /* Expanders styled like premium containers */
-    [data-testid="stExpander"] {
-        background-color: #FFFFFF;
-        border: 1px solid #EAEAEA;
-        border-radius: 12px;
-        box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.04);
+    /* Expanders & Containers with strict rounded corners and pink glow */
+    [data-testid="stExpander"], img, div[data-testid="stImage"] > img {
+        background-color: rgba(255, 255, 255, 0.9);
+        border: 2px solid #FF99C2;
+        border-radius: 20px !important;
+        box-shadow: 0px 0px 15px rgba(255, 153, 194, 0.3);
         margin-bottom: 12px;
+        overflow: hidden;
     }
     [data-testid="stExpander"] summary p {
-        font-family: 'Inter', sans-serif;
-        font-weight: 600;
-        color: #1A1A1A;
-        font-size: 1.05rem;
-    }
-    [data-testid="stExpander"] .streamlit-expanderContent {
-        background-color: #FAFAFA;
-        border-bottom-left-radius: 12px;
-        border-bottom-right-radius: 12px;
-        padding: 15px;
+        font-family: 'Fredoka One', cursive;
+        color: #FF5A92;
+        font-size: 1.1rem;
     }
     
-    /* Special "Approve" CTA Customization */
+    /* Special "Approve" CTA Customization / Kawaii Button */
     [data-testid="stButton"] button[kind="primary"] {
-        background: #000000;
-        box-shadow: 0 4px 14px 0 rgba(0,0,0,0.39);
-        font-size: 1.1rem;
+        background: #FFB6C1;
+        box-shadow: 0 5px 15px rgba(255,182,193,0.6);
+        font-size: 1.5rem;
         padding: 18px 30px;
-        border-radius: 8px;
-        letter-spacing: 1.5px;
+        border: 4px solid #FF99C2;
+        border-radius: 40px;
+        color: white;
+        font-family: 'Fredoka One', cursive;
     }
     [data-testid="stButton"] button[kind="primary"]:hover {
-        background: #1A1A1A;
-        transform: translateY(-3px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.23);
+        background: #FF66A3;
+        box-shadow: 0 8px 20px rgba(255,102,163,0.8);
+        transform: scale(1.05);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -290,6 +279,12 @@ def main():
     # Initialize session state for retaining extraction data
     if 'processing_done' not in st.session_state:
         st.session_state.processing_done = False
+        
+    # Try to set the Hello Kitty background
+    try:
+        set_bg(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hello_kitty_bg.png'))
+    except Exception as e:
+        pass
         
     st.title("👕 Clothes Resale Agent UI")
     st.markdown("Test the **Background Remover** and **Inventory Ingestion Agent** in one simple workflow.")
@@ -400,26 +395,25 @@ def main():
                     with st.spinner("🤖 Generating listing descriptions..."):
                         copy_json = generate_copywriting_with_gemini(json_data, api_key, is_luxury)
                         if copy_json:
-                            with st.expander("✨ View Listing Descriptions", expanded=True):
-                                try:
-                                    copy_data = json.loads(copy_json)
-                                    if "poshmark_description" in copy_data:
-                                        st.markdown("**👗 Poshmark**")
+                            try:
+                                copy_data = json.loads(copy_json)
+                                if "poshmark_description" in copy_data:
+                                    with st.expander("🎀 Poshmark Draft", expanded=False):
                                         st.info(copy_data.get("poshmark_description", ""))
-                                    if "ebay_description" in copy_data:
-                                        st.markdown("**📦 eBay**")
+                                if "ebay_description" in copy_data:
+                                    with st.expander("✨ eBay Draft", expanded=False):
                                         st.info(copy_data.get("ebay_description", ""))
-                                    if "mercari_description" in copy_data:
-                                        st.markdown("**🛍️ Mercari**")
+                                if "mercari_description" in copy_data:
+                                    with st.expander("🛍️ Mercari Draft", expanded=False):
                                         st.info(copy_data.get("mercari_description", ""))
-                                    if "vestiaire_description" in copy_data:
-                                        st.markdown("**💎 Vestiaire Collective**")
+                                if "vestiaire_description" in copy_data:
+                                    with st.expander("💎 Vestiaire Collective Draft", expanded=False):
                                         st.info(copy_data.get("vestiaire_description", ""))
-                                    if "fashionphile_description" in copy_data:
-                                        st.markdown("**👜 Fashionphile**")
+                                if "fashionphile_description" in copy_data:
+                                    with st.expander("👜 Fashionphile Draft", expanded=False):
                                         st.info(copy_data.get("fashionphile_description", ""))
-                                except Exception as e:
-                                    st.json(copy_json)
+                            except Exception as e:
+                                st.json(copy_json)
                         else:
                             st.error("Failed to generate copywriting.")
                             
@@ -439,7 +433,7 @@ def main():
             st.divider()
             col1, col2, col3 = st.columns([1, 2, 1])
             with col2:
-                if st.button("✅ Approve & Save to CSV", type="primary", use_container_width=True):
+                if st.button("🎀 Save to Inventory 🎀", type="primary", use_container_width=True):
                     success = flatten_and_save_data(
                         st.session_state.json_data, 
                         st.session_state.price_json, 

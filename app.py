@@ -4,6 +4,7 @@ from PIL import Image
 import tempfile
 import sys
 import base64
+import json
 from dotenv import load_dotenv
 
 # Import project modules
@@ -57,6 +58,72 @@ def analyze_image_with_gemini(image_path, api_key):
         except Exception as e:
             st.error(f"Error generating content: {e}")
             return None
+
+def predict_price_with_gemini(extracted_json, api_key):
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-2.5-flash')
+    
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    prompt_path = os.path.join(base_dir, "prompts", "price_prediction.md")
+    system_prompt = load_prompt(prompt_path)
+    
+    if not system_prompt:
+        return None
+        
+    try:
+        parsed_data = json.loads(extracted_json)
+        
+        # safely access nested dictionaries
+        basics = parsed_data.get("basics", {})
+        condition_data = parsed_data.get("condition", {})
+        
+        brand = basics.get("brand", "Unknown") if isinstance(basics, dict) else "Unknown"
+        category = basics.get("category", "Unknown") if isinstance(basics, dict) else "Unknown"
+        
+        # Get the condition grade, or default back to the entire condition object if it's not a dict
+        if isinstance(condition_data, dict):
+            condition = condition_data.get("grade", "Unknown")
+        else:
+            condition = str(condition_data)
+            
+        input_data = f"Brand: {brand}\\nCategory: {category}\\nCondition: {condition}"
+        inputs = [system_prompt, input_data]
+        
+        response = model.generate_content(inputs)
+        text_response = response.text.strip()
+        if text_response.startswith("```json"):
+            text_response = text_response[7:]
+        if text_response.endswith("```"):
+            text_response = text_response[:-3]
+        return text_response.strip()
+    except Exception as e:
+        st.error(f"Error predicting price: {e}")
+        return None
+
+def generate_copywriting_with_gemini(extracted_json, api_key):
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-2.5-flash')
+    
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    prompt_path = os.path.join(base_dir, "prompts", "platform_copywriting.md")
+    system_prompt = load_prompt(prompt_path)
+    
+    if not system_prompt:
+        return None
+        
+    try:
+        inputs = [system_prompt, f"JSON Data: {extracted_json}"]
+        
+        response = model.generate_content(inputs)
+        text_response = response.text.strip()
+        if text_response.startswith("```json"):
+            text_response = text_response[7:]
+        if text_response.endswith("```"):
+            text_response = text_response[:-3]
+        return text_response.strip()
+    except Exception as e:
+        st.error(f"Error generating copywriting: {e}")
+        return None
 
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
@@ -142,6 +209,31 @@ def main():
                     if json_data:
                         st.json(json_data)
                         st.success("Extraction complete!")
+                        
+                        st.divider()
+                        st.markdown("### 💰 Price Prediction")
+                        with st.spinner("🤖 Calculating market value..."):
+                            price_json = predict_price_with_gemini(json_data, api_key)
+                            if price_json:
+                                st.json(price_json)
+                            else:
+                                st.error("Failed to predict price.")
+                                
+                        st.divider()
+                        st.markdown("### ✍️ Platform Copywriting")
+                        with st.spinner("🤖 Generating listing descriptions..."):
+                            copy_json = generate_copywriting_with_gemini(json_data, api_key)
+                            if copy_json:
+                                try:
+                                    copy_data = json.loads(copy_json)
+                                    st.markdown("**Poshmark Description**")
+                                    st.info(copy_data.get("poshmark_description", ""))
+                                    st.markdown("**eBay Description**")
+                                    st.info(copy_data.get("ebay_description", ""))
+                                except Exception as e:
+                                    st.json(copy_json)
+                            else:
+                                st.error("Failed to generate copywriting.")
                     else:
                         st.error("Failed to extract data.")
 

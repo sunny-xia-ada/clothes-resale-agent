@@ -21,6 +21,7 @@ Analyze the attached image(s) of a clothing item and generate a JSON object cont
   "basics": {
     "title_candidate": "String (e.g., Reformation Red Floral Midi Dress)",
     "brand": "String",
+    "brand_tier": "String (Luxury/Designer, Premium/Mid-range, Fast Fashion/Mass Market)",
     "sub_brand": "String or null",
     "category": "String",
     "size_type": "String (Regular, Petite, Plus)",

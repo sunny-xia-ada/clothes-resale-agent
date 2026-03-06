@@ -113,7 +113,16 @@ def generate_copywriting_with_gemini(extracted_json, api_key):
         return None
         
     try:
-        inputs = [system_prompt, f"JSON Data: {extracted_json}"]
+        parsed_data = json.loads(extracted_json)
+        brand_tier = parsed_data.get("basics", {}).get("brand_tier", "")
+        
+        routing_instruction = ""
+        if brand_tier == "Luxury/Designer":
+            routing_instruction = "\n\nIMPORTANT: Since this is a Luxury/Designer brand, generate ALL 5 descriptions: Poshmark, eBay, Mercari, Vestiaire Collective, and Fashionphile."
+        else:
+            routing_instruction = "\n\nIMPORTANT: Since this is NOT a Luxury/Designer brand, ONLY generate Poshmark, eBay, and Mercari descriptions. Omit Vestiaire Collective and Fashionphile from the JSON entirely."
+            
+        inputs = [system_prompt + routing_instruction, f"JSON Data: {extracted_json}"]
         
         response = model.generate_content(inputs)
         text_response = response.text.strip()
@@ -288,16 +297,21 @@ def main():
                         if copy_json:
                             try:
                                 copy_data = json.loads(copy_json)
-                                st.markdown("**Poshmark Description**")
-                                st.info(copy_data.get("poshmark_description", ""))
-                                st.markdown("**eBay Description**")
-                                st.info(copy_data.get("ebay_description", ""))
-                                st.markdown("**Mercari Description**")
-                                st.info(copy_data.get("mercari_description", ""))
-                                st.markdown("**Vestiaire Collective Description**")
-                                st.info(copy_data.get("vestiaire_description", ""))
-                                st.markdown("**Fashionphile Description**")
-                                st.info(copy_data.get("fashionphile_description", ""))
+                                if "poshmark_description" in copy_data:
+                                    st.markdown("**Poshmark Description**")
+                                    st.info(copy_data.get("poshmark_description", ""))
+                                if "ebay_description" in copy_data:
+                                    st.markdown("**eBay Description**")
+                                    st.info(copy_data.get("ebay_description", ""))
+                                if "mercari_description" in copy_data:
+                                    st.markdown("**Mercari Description**")
+                                    st.info(copy_data.get("mercari_description", ""))
+                                if "vestiaire_description" in copy_data:
+                                    st.markdown("**Vestiaire Collective Description**")
+                                    st.info(copy_data.get("vestiaire_description", ""))
+                                if "fashionphile_description" in copy_data:
+                                    st.markdown("**Fashionphile Description**")
+                                    st.info(copy_data.get("fashionphile_description", ""))
                             except Exception as e:
                                 st.json(copy_json)
                         else:

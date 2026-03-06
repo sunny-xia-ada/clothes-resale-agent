@@ -5,6 +5,7 @@ import tempfile
 import sys
 import base64
 import json
+import csv
 from dotenv import load_dotenv
 
 # Import project modules
@@ -143,8 +144,63 @@ def set_bg(png_file):
     '''
     st.markdown(page_bg_img, unsafe_allow_html=True)
 
+def flatten_and_save_data(extracted_json, price_json, copy_json, orig_path, proc_path):
+    try:
+        data = json.loads(extracted_json)
+        price_data = json.loads(price_json) if price_json else {}
+        copy_data = json.loads(copy_json) if copy_json else {}
+        
+        flat = {}
+        # flatten extracted sections
+        for section in ["basics", "visuals", "condition"]:
+            for k, v in data.get(section, {}).items():
+                if isinstance(v, list):
+                    flat[f"{section}_{k}"] = ", ".join([str(i) for i in v])
+                else:
+                    flat[f"{section}_{k}"] = v
+                    
+        # flatten marketing
+        mkt = data.get("marketing", {})
+        flat["marketing_keywords"] = ", ".join(mkt.get("keywords", []))
+        flat["marketing_occasions"] = ", ".join(mkt.get("suggested_occasions", []))
+        
+        # pricing and copywriting
+        flat["fast_sale_price"] = price_data.get("fast_sale_price", "")
+        flat["market_value_price"] = price_data.get("market_value_price", "")
+        
+        flat["poshmark_desc"] = copy_data.get("poshmark_description", "")
+        flat["ebay_desc"] = copy_data.get("ebay_description", "")
+        
+        # file paths
+        flat["original_image_path"] = orig_path
+        flat["processed_image_path"] = proc_path
+        
+        # write to csv
+        csv_file = "inventory.csv"
+        file_exists = os.path.isfile(csv_file)
+        
+        with open(csv_file, 'a', newline='', encoding='utf-8') as f:
+            # We determine headers from the dictionary keys
+            headers = list(flat.keys())
+            writer = csv.DictWriter(f, fieldnames=headers)
+            
+            if not file_exists:
+                writer.writeheader()
+                
+            writer.writerow(flat)
+            
+        return True
+    except Exception as e:
+        st.error(f"Error saving to CSV: {e}")
+        return False
+
 def main():
     st.set_page_config(page_title="Clothes Resale Agent", layout="wide")
+    
+    # Initialize session state for retaining extraction data
+    if 'processing_done' not in st.session_state:
+        st.session_state.processing_done = False
+
     
     # Try to set the Hello Kitty background
     try:
@@ -175,67 +231,98 @@ def main():
             st.subheader("1. Original Image")
             st.image(uploaded_file, use_container_width=True)
             
-        # Create a temporary directory to save the file
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_input_path = os.path.join(temp_dir, uploaded_file.name)
+        # We don't use temp_dir for saving paths to CSV; we save to output directory directly
+        os.makedirs("output", exist_ok=True)
+        original_filepath = os.path.join("output", uploaded_file.name)
+        
+        if st.button("✨ Process Image", type="primary"):
+            # Clean up old output logic and state
+            st.session_state.processing_done = False
             
-            with open(temp_input_path, "wb") as f:
+            with open(original_filepath, "wb") as f:
                 f.write(uploaded_file.getbuffer())
                 
-            if st.button("✨ Process Image", type="primary"):
-                # Clean up old output logic
-                st.divider()
-                st.subheader("Results")
-                
-                # 1. Background removal
-                res_col1, res_col2 = st.columns(2)
-                
-                with res_col1:
-                    with st.spinner("🧹 Removing background..."):
-                        processed_img_path = process_image(temp_input_path, output_folder=temp_dir)
-                        
-                    if processed_img_path and os.path.exists(processed_img_path):
-                        st.image(processed_img_path, caption="Processed Image", use_container_width=True)
-                        st.success("Background removed successfully!")
-                    else:
-                        st.error("Background removal failed.")
-                        st.stop()
-                
-                # 2. Information Extraction
-                with res_col2:
-                    st.markdown("### 📋 Extracted Structured Data")
-                    json_data = analyze_image_with_gemini(processed_img_path, api_key)
+            st.divider()
+            st.subheader("Results")
+            
+            # 1. Background removal
+            res_col1, res_col2 = st.columns(2)
+            
+            with res_col1:
+                with st.spinner("🧹 Removing background..."):
+                    processed_img_path = process_image(original_filepath, output_folder="output")
                     
-                    if json_data:
-                        st.json(json_data)
-                        st.success("Extraction complete!")
-                        
-                        st.divider()
-                        st.markdown("### 💰 Price Prediction")
-                        with st.spinner("🤖 Calculating market value..."):
-                            price_json = predict_price_with_gemini(json_data, api_key)
-                            if price_json:
-                                st.json(price_json)
-                            else:
-                                st.error("Failed to predict price.")
-                                
-                        st.divider()
-                        st.markdown("### ✍️ Platform Copywriting")
-                        with st.spinner("🤖 Generating listing descriptions..."):
-                            copy_json = generate_copywriting_with_gemini(json_data, api_key)
-                            if copy_json:
-                                try:
-                                    copy_data = json.loads(copy_json)
-                                    st.markdown("**Poshmark Description**")
-                                    st.info(copy_data.get("poshmark_description", ""))
-                                    st.markdown("**eBay Description**")
-                                    st.info(copy_data.get("ebay_description", ""))
-                                except Exception as e:
-                                    st.json(copy_json)
-                            else:
-                                st.error("Failed to generate copywriting.")
-                    else:
-                        st.error("Failed to extract data.")
+                if processed_img_path and os.path.exists(processed_img_path):
+                    st.image(processed_img_path, caption="Processed Image", use_container_width=True)
+                    st.success("Background removed successfully!")
+                else:
+                    st.error("Background removal failed.")
+                    st.stop()
+            
+            # 2. Information Extraction
+            with res_col2:
+                st.markdown("### 📋 Extracted Structured Data")
+                json_data = analyze_image_with_gemini(processed_img_path, api_key)
+                
+                if json_data:
+                    st.json(json_data)
+                    st.success("Extraction complete!")
+                    
+                    st.divider()
+                    st.markdown("### 💰 Price Prediction")
+                    with st.spinner("🤖 Calculating market value..."):
+                        price_json = predict_price_with_gemini(json_data, api_key)
+                        if price_json:
+                            st.json(price_json)
+                        else:
+                            st.error("Failed to predict price.")
+                            
+                    st.divider()
+                    st.markdown("### ✍️ Platform Copywriting")
+                    with st.spinner("🤖 Generating listing descriptions..."):
+                        copy_json = generate_copywriting_with_gemini(json_data, api_key)
+                        if copy_json:
+                            try:
+                                copy_data = json.loads(copy_json)
+                                st.markdown("**Poshmark Description**")
+                                st.info(copy_data.get("poshmark_description", ""))
+                                st.markdown("**eBay Description**")
+                                st.info(copy_data.get("ebay_description", ""))
+                            except Exception as e:
+                                st.json(copy_json)
+                        else:
+                            st.error("Failed to generate copywriting.")
+                            
+                    # Save context to session state
+                    st.session_state.processing_done = True
+                    st.session_state.json_data = json_data
+                    st.session_state.price_json = price_json
+                    st.session_state.copy_json = copy_json
+                    st.session_state.original_filepath = original_filepath
+                    st.session_state.processed_img_path = processed_img_path
+                    
+                else:
+                    st.error("Failed to extract data.")
+                    
+        # Show the Approve button outside the evaluation loop, provided processing is completed
+        if st.session_state.processing_done:
+            st.divider()
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                if st.button("✅ Approve & Save to CSV", type="primary", use_container_width=True):
+                    success = flatten_and_save_data(
+                        st.session_state.json_data, 
+                        st.session_state.price_json, 
+                        st.session_state.copy_json, 
+                        st.session_state.original_filepath, 
+                        st.session_state.processed_img_path
+                    )
+                    
+                    if success:
+                        st.success(f"Item added to inventory! Saved original and processed images to `{st.session_state.original_filepath}` & `{st.session_state.processed_img_path}`.")
+                        # Clear state for next garament
+                        st.session_state.processing_done = False
+                        # Optionally, we could clear the uploader here too, but Streamlit uploader is driven by user input.
 
 if __name__ == "__main__":
     main()

@@ -207,64 +207,82 @@ def flatten_and_save_data(extracted_json, price_json, copy_json, orig_path, proc
 def main():
     st.set_page_config(page_title="Clothes Resale Agent", layout="wide")
     
-    # Inject Cute Pink Loopy CSS
+    # Inject Clean, Modern High-End Fashion Theme CSS
     st.markdown("""
     <style>
-    /* Global Pink Theme & Loopy Font */
-    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap');
+    /* Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:ital,wght@0,600;1,600&display=swap');
     
+    /* Document Wide Config */
     .stApp {
-        background-color: #FFF0F5;
-        font-family: 'Nunito', sans-serif;
+        background-color: #FAFAFA;
+        font-family: 'Inter', sans-serif;
+        color: #333333;
     }
     
     h1, h2, h3, h4, h5, h6 {
-        font-family: 'Fredoka One', cursive;
-        color: #FF5A92 !important;
+        font-family: 'Playfair Display', serif;
+        color: #1A1A1A !important;
+        font-weight: 600;
+        letter-spacing: -0.5px;
     }
     
     /* Primary Action Buttons */
     .stButton>button {
-        background-color: #FF66A3;
+        background-color: #1A1A1A;
         color: white;
-        font-family: 'Fredoka One', cursive;
-        border-radius: 25px;
-        border: 3px solid #FF3385;
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        border-radius: 8px;
+        border: 1px solid #1A1A1A;
         transition: all 0.3s ease;
         padding: 10px 24px;
-        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 0.95rem;
     }
     .stButton>button:hover {
-        background-color: #FF3385;
-        border-color: #E6005C;
-        transform: scale(1.05);
+        background-color: #333333;
+        border-color: #333333;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         color: white;
     }
     
-    /* Expanders */
+    /* Expanders styled like premium containers */
     [data-testid="stExpander"] {
-        background-color: white;
-        border: 2px dashed #FF99C2;
-        border-radius: 20px;
-        box-shadow: 0px 4px 6px rgba(255, 153, 194, 0.2);
+        background-color: #FFFFFF;
+        border: 1px solid #EAEAEA;
+        border-radius: 12px;
+        box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.04);
+        margin-bottom: 12px;
     }
     [data-testid="stExpander"] summary p {
-        font-family: 'Fredoka One', cursive;
-        color: #FF5A92;
-        font-size: 1.1rem;
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        color: #1A1A1A;
+        font-size: 1.05rem;
+    }
+    [data-testid="stExpander"] .streamlit-expanderContent {
+        background-color: #FAFAFA;
+        border-bottom-left-radius: 12px;
+        border-bottom-right-radius: 12px;
+        padding: 15px;
     }
     
     /* Special "Approve" CTA Customization */
     [data-testid="stButton"] button[kind="primary"] {
-        background: linear-gradient(45deg, #FF66A3, #FF99D6);
-        box-shadow: 0 5px 15px rgba(255,102,163,0.4);
-        font-size: 1.3rem;
-        padding: 15px 30px;
-        border-color: transparent;
+        background: #000000;
+        box-shadow: 0 4px 14px 0 rgba(0,0,0,0.39);
+        font-size: 1.1rem;
+        padding: 18px 30px;
+        border-radius: 8px;
+        letter-spacing: 1.5px;
     }
     [data-testid="stButton"] button[kind="primary"]:hover {
-        background: linear-gradient(45deg, #FF3385, #FF66CC);
-        box-shadow: 0 8px 20px rgba(255,51,133,0.6);
+        background: #1A1A1A;
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.23);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -272,12 +290,6 @@ def main():
     # Initialize session state for retaining extraction data
     if 'processing_done' not in st.session_state:
         st.session_state.processing_done = False
-
-    # Try to set the Hello Kitty background if still wanted
-    try:
-        set_bg(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hello_kitty_bg.png'))
-    except Exception as e:
-        pass
         
     st.title("👕 Clothes Resale Agent UI")
     st.markdown("Test the **Background Remover** and **Inventory Ingestion Agent** in one simple workflow.")

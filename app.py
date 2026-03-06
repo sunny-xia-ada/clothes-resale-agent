@@ -207,12 +207,73 @@ def flatten_and_save_data(extracted_json, price_json, copy_json, orig_path, proc
 def main():
     st.set_page_config(page_title="Clothes Resale Agent", layout="wide")
     
+    # Inject Cute Pink Loopy CSS
+    st.markdown("""
+    <style>
+    /* Global Pink Theme & Loopy Font */
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap');
+    
+    .stApp {
+        background-color: #FFF0F5;
+        font-family: 'Nunito', sans-serif;
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Fredoka One', cursive;
+        color: #FF5A92 !important;
+    }
+    
+    /* Primary Action Buttons */
+    .stButton>button {
+        background-color: #FF66A3;
+        color: white;
+        font-family: 'Fredoka One', cursive;
+        border-radius: 25px;
+        border: 3px solid #FF3385;
+        transition: all 0.3s ease;
+        padding: 10px 24px;
+        font-size: 1.1rem;
+    }
+    .stButton>button:hover {
+        background-color: #FF3385;
+        border-color: #E6005C;
+        transform: scale(1.05);
+        color: white;
+    }
+    
+    /* Expanders */
+    [data-testid="stExpander"] {
+        background-color: white;
+        border: 2px dashed #FF99C2;
+        border-radius: 20px;
+        box-shadow: 0px 4px 6px rgba(255, 153, 194, 0.2);
+    }
+    [data-testid="stExpander"] summary p {
+        font-family: 'Fredoka One', cursive;
+        color: #FF5A92;
+        font-size: 1.1rem;
+    }
+    
+    /* Special "Approve" CTA Customization */
+    [data-testid="stButton"] button[kind="primary"] {
+        background: linear-gradient(45deg, #FF66A3, #FF99D6);
+        box-shadow: 0 5px 15px rgba(255,102,163,0.4);
+        font-size: 1.3rem;
+        padding: 15px 30px;
+        border-color: transparent;
+    }
+    [data-testid="stButton"] button[kind="primary"]:hover {
+        background: linear-gradient(45deg, #FF3385, #FF66CC);
+        box-shadow: 0 8px 20px rgba(255,51,133,0.6);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     # Initialize session state for retaining extraction data
     if 'processing_done' not in st.session_state:
         st.session_state.processing_done = False
 
-    
-    # Try to set the Hello Kitty background
+    # Try to set the Hello Kitty background if still wanted
     try:
         set_bg(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hello_kitty_bg.png'))
     except Exception as e:
@@ -252,17 +313,13 @@ def main():
     is_luxury = tier_option == 'Luxury/Designer (Include Vestiaire & Fashionphile)'
     
     if active_file is not None:
-        # Create clear layout
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("1. Original Image")
-            st.image(active_file, use_container_width=True)
-            
         # We don't use temp_dir for saving paths to CSV; we save to output directory directly
         os.makedirs("output", exist_ok=True)
         file_name = active_file.name if hasattr(active_file, 'name') and active_file.name else "camera_capture.jpg"
         original_filepath = os.path.join("output", file_name)
+        
+        # Display the uploaded file neatly before processing
+        st.markdown("### Ready to Process!")
         
         if st.button("✨ Process Image", type="primary"):
             # Clean up old output logic and state
@@ -275,61 +332,82 @@ def main():
             st.subheader("Results")
             
             # 1. Background removal
+            st.markdown("### 🖼️ Image Processing")
             res_col1, res_col2 = st.columns(2)
             
             with res_col1:
+                st.markdown("**Original Image**")
+                st.image(original_filepath, use_container_width=True)
+                
+            with res_col2:
+                st.markdown("**Processed Image**")
                 with st.spinner("🧹 Removing background..."):
                     processed_img_path = process_image(original_filepath, output_folder="output")
                     
                 if processed_img_path and os.path.exists(processed_img_path):
-                    st.image(processed_img_path, caption="Processed Image", use_container_width=True)
-                    st.success("Background removed successfully!")
+                    st.image(processed_img_path, use_container_width=True)
+                    st.success("Background removed!")
                 else:
                     st.error("Background removal failed.")
                     st.stop()
             
             # 2. Information Extraction
-            with res_col2:
-                st.markdown("### 📋 Extracted Structured Data")
+            st.markdown("### 🪄 AI Extraction & Analysis")
+            with st.spinner("🤖 Analyzing garment specifics..."):
                 json_data = analyze_image_with_gemini(processed_img_path, api_key)
                 
                 if json_data:
-                    st.json(json_data)
-                    st.success("Extraction complete!")
-                    
-                    st.divider()
+                    with st.expander("📋 Extracted Attributes"):
+                        try:
+                            parsed = json.loads(json_data)
+                            basics = parsed.get("basics", {})
+                            cond = parsed.get("condition", {})
+                            st.markdown(f"**Brand:** {basics.get('brand', 'Unknown')} ({basics.get('brand_tier', 'Uncategorized')})")
+                            st.markdown(f"**Category:** {basics.get('category', 'Unknown')}")
+                            st.markdown(f"**Size:** {basics.get('size_on_tag', 'Unknown')}")
+                            st.markdown(f"**Condition:** {cond.get('grade', 'Unknown')}")
+                            # You can format the rest as needed, but this prevents displaying raw JSON directly.
+                        except Exception as e:
+                            st.json(json_data) # Fallback if parsing fails
+
                     st.markdown("### 💰 Price Prediction")
                     with st.spinner("🤖 Calculating market value..."):
                         price_json = predict_price_with_gemini(json_data, api_key)
                         if price_json:
-                            st.json(price_json)
+                            with st.expander("💸 Suggested Pricing Strategy"):
+                                try:
+                                    price_parsed = json.loads(price_json)
+                                    st.metric("Fast Sale Price", f"${price_parsed.get('fast_sale_price', '---')}")
+                                    st.metric("Market Value Price", f"${price_parsed.get('market_value_price', '---')}")
+                                except Exception as e:
+                                    st.json(price_json)
                         else:
                             st.error("Failed to predict price.")
                             
-                    st.divider()
                     st.markdown("### ✍️ Platform Copywriting")
                     with st.spinner("🤖 Generating listing descriptions..."):
                         copy_json = generate_copywriting_with_gemini(json_data, api_key, is_luxury)
                         if copy_json:
-                            try:
-                                copy_data = json.loads(copy_json)
-                                if "poshmark_description" in copy_data:
-                                    st.markdown("**Poshmark Description**")
-                                    st.info(copy_data.get("poshmark_description", ""))
-                                if "ebay_description" in copy_data:
-                                    st.markdown("**eBay Description**")
-                                    st.info(copy_data.get("ebay_description", ""))
-                                if "mercari_description" in copy_data:
-                                    st.markdown("**Mercari Description**")
-                                    st.info(copy_data.get("mercari_description", ""))
-                                if "vestiaire_description" in copy_data:
-                                    st.markdown("**Vestiaire Collective Description**")
-                                    st.info(copy_data.get("vestiaire_description", ""))
-                                if "fashionphile_description" in copy_data:
-                                    st.markdown("**Fashionphile Description**")
-                                    st.info(copy_data.get("fashionphile_description", ""))
-                            except Exception as e:
-                                st.json(copy_json)
+                            with st.expander("✨ View Listing Descriptions", expanded=True):
+                                try:
+                                    copy_data = json.loads(copy_json)
+                                    if "poshmark_description" in copy_data:
+                                        st.markdown("**👗 Poshmark**")
+                                        st.info(copy_data.get("poshmark_description", ""))
+                                    if "ebay_description" in copy_data:
+                                        st.markdown("**📦 eBay**")
+                                        st.info(copy_data.get("ebay_description", ""))
+                                    if "mercari_description" in copy_data:
+                                        st.markdown("**🛍️ Mercari**")
+                                        st.info(copy_data.get("mercari_description", ""))
+                                    if "vestiaire_description" in copy_data:
+                                        st.markdown("**💎 Vestiaire Collective**")
+                                        st.info(copy_data.get("vestiaire_description", ""))
+                                    if "fashionphile_description" in copy_data:
+                                        st.markdown("**👜 Fashionphile**")
+                                        st.info(copy_data.get("fashionphile_description", ""))
+                                except Exception as e:
+                                    st.json(copy_json)
                         else:
                             st.error("Failed to generate copywriting.")
                             

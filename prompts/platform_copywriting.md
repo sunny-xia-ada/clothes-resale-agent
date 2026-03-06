@@ -26,11 +26,18 @@ Given the structured JSON data of a clothing item, generate high-converting list
 - Formatting: Professional paragraphs. No emojis.
 - Content: Strictly focus on the brand's authenticity, exact condition, material composition, and precise defects (for authentication purposes).
 
+## Fashionphile Description:
+- Tone: Ultra-luxury, clinical, and objective. It must read like a professional authentication and condition report.
+- Formatting: Clean bullet points or very structured paragraphs. Strictly NO emojis.
+- Content: Focus purely on the designer, exact material composition, hardware details (if any), and a rigorous condition assessment.
+- Grading: Use standard luxury grading terminology (e.g., Flawless, Excellent, Very Good, Good, Fair). Strictly NO hype words (like 'must-have' or 'cute'), and NO styling suggestions.
+
 # Output Format
 Output ONLY a JSON object with the following strict structure:
 {
   "poshmark_description": "...",
   "ebay_description": "...",
   "mercari_description": "...",
-  "vestiaire_description": "..."
+  "vestiaire_description": "...",
+  "fashionphile_description": "..."
 }

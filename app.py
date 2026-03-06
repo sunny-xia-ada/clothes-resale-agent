@@ -172,6 +172,7 @@ def flatten_and_save_data(extracted_json, price_json, copy_json, orig_path, proc
         flat["ebay_desc"] = copy_data.get("ebay_description", "")
         flat["mercari_desc"] = copy_data.get("mercari_description", "")
         flat["vestiaire_desc"] = copy_data.get("vestiaire_description", "")
+        flat["fashionphile_desc"] = copy_data.get("fashionphile_description", "")
         
         # file paths
         flat["original_image_path"] = orig_path
@@ -295,6 +296,8 @@ def main():
                                 st.info(copy_data.get("mercari_description", ""))
                                 st.markdown("**Vestiaire Collective Description**")
                                 st.info(copy_data.get("vestiaire_description", ""))
+                                st.markdown("**Fashionphile Description**")
+                                st.info(copy_data.get("fashionphile_description", ""))
                             except Exception as e:
                                 st.json(copy_json)
                         else:

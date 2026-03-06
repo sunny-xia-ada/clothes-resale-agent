@@ -27,8 +27,8 @@ def main():
     # 2. Configure Gemini
     genai.configure(api_key=api_key)
     
-    # Using gemini-1.5-flash for speed and cost-effectiveness with images
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Using gemini-2.5-flash for speed and cost-effectiveness with images
+    model = genai.GenerativeModel('gemini-2.5-flash')
 
     # 3. Parse Arguments (Image Paths)
     image_paths = sys.argv[1:]

@@ -25,7 +25,7 @@ def load_prompt(file_path):
 def analyze_image_with_gemini(image_path, api_key):
     """Runs the Inventory Ingestion Agent on a processed image."""
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     
     base_dir = os.path.dirname(os.path.abspath(__file__))
     system_prompt_path = os.path.join(base_dir, "prompts", "inventory_ingestion.md")

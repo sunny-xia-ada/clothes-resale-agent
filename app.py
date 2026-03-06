@@ -230,8 +230,16 @@ def main():
             st.warning("⚠️ Please provide a Gemini API Key to run the extraction.")
             st.stop()
             
-    # File uploader
-    uploaded_file = st.file_uploader("Upload a raw clothing image...", type=["jpg", "jpeg", "png"])
+    # Input options: mobile-friendly camera or file uploader
+    tab1, tab2 = st.tabs(["📸 Take Photo", "📂 Upload File"])
+    
+    with tab1:
+        camera_file = st.camera_input("Take a photo directly")
+        
+    with tab2:
+        uploaded_file = st.file_uploader("Upload a raw clothing image...", type=["jpg", "jpeg", "png"])
+        
+    active_file = camera_file if camera_file is not None else uploaded_file
     
     tier_option = st.radio(
         "Select Brand Tier Routing:",
@@ -243,24 +251,25 @@ def main():
     )
     is_luxury = tier_option == 'Luxury/Designer (Include Vestiaire & Fashionphile)'
     
-    if uploaded_file is not None:
+    if active_file is not None:
         # Create clear layout
         col1, col2 = st.columns(2)
         
         with col1:
             st.subheader("1. Original Image")
-            st.image(uploaded_file, use_container_width=True)
+            st.image(active_file, use_container_width=True)
             
         # We don't use temp_dir for saving paths to CSV; we save to output directory directly
         os.makedirs("output", exist_ok=True)
-        original_filepath = os.path.join("output", uploaded_file.name)
+        file_name = active_file.name if hasattr(active_file, 'name') and active_file.name else "camera_capture.jpg"
+        original_filepath = os.path.join("output", file_name)
         
         if st.button("✨ Process Image", type="primary"):
             # Clean up old output logic and state
             st.session_state.processing_done = False
             
             with open(original_filepath, "wb") as f:
-                f.write(uploaded_file.getbuffer())
+                f.write(active_file.getbuffer())
                 
             st.divider()
             st.subheader("Results")

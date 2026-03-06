@@ -132,24 +132,6 @@ def generate_copywriting_with_gemini(extracted_json, api_key, is_luxury):
         st.error(f"Error generating copywriting: {e}")
         return None
 
-def get_base64_of_bin_file(bin_file):
-    with open(bin_file, 'rb') as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
-
-def set_bg(png_file):
-    bin_str = get_base64_of_bin_file(png_file)
-    page_bg_img = f'''
-    <style>
-    .stApp {{
-        background-image: url("data:image/png;base64,{bin_str}");
-        background-size: cover;
-        background-repeat: repeat;
-    }}
-    </style>
-    '''
-    st.markdown(page_bg_img, unsafe_allow_html=True)
-
 def flatten_and_save_data(extracted_json, price_json, copy_json, orig_path, proc_path):
     try:
         data = json.loads(extracted_json)
@@ -207,71 +189,11 @@ def flatten_and_save_data(extracted_json, price_json, copy_json, orig_path, proc
 def main():
     st.set_page_config(page_title="Clothes Resale Agent", layout="wide")
     
-    # Inject Cute Pink Loopy Theme CSS
+    # Inject minimal CSS for rounded corners
     st.markdown("""
     <style>
-    /* Global Pink Theme & Loopy Font */
-    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap');
-    
-    .stApp {
-        background-color: #FFF0F5;
-        font-family: 'Nunito', sans-serif;
-    }
-    
-    h1, h2, h3, h4, h5, h6 {
-        font-family: 'Fredoka One', cursive;
-        color: #FF5A92 !important;
-    }
-    
-    /* Primary Action Buttons */
-    .stButton>button {
-        background-color: #FFB6C1;
-        color: white;
-        font-family: 'Fredoka One', cursive;
-        border-radius: 25px;
-        border: 3px solid #FF99D6;
-        transition: all 0.3s ease;
-        padding: 10px 24px;
-        font-size: 1.1rem;
-        box-shadow: 0px 4px 6px rgba(255, 182, 193, 0.4);
-    }
-    .stButton>button:hover {
-        background-color: #FF99CC;
-        border-color: #FF66A3;
-        transform: scale(1.05);
-        color: white;
-    }
-    
-    /* Expanders & Containers with strict rounded corners and pink glow */
-    [data-testid="stExpander"], img, div[data-testid="stImage"] > img {
-        background-color: rgba(255, 255, 255, 0.9);
-        border: 2px solid #FF99C2;
-        border-radius: 20px !important;
-        box-shadow: 0px 0px 15px rgba(255, 153, 194, 0.3);
-        margin-bottom: 12px;
-        overflow: hidden;
-    }
-    [data-testid="stExpander"] summary p {
-        font-family: 'Fredoka One', cursive;
-        color: #FF5A92;
-        font-size: 1.1rem;
-    }
-    
-    /* Special "Approve" CTA Customization / Kawaii Button */
-    [data-testid="stButton"] button[kind="primary"] {
-        background: #FFB6C1;
-        box-shadow: 0 5px 15px rgba(255,182,193,0.6);
-        font-size: 1.5rem;
-        padding: 18px 30px;
-        border: 4px solid #FF99C2;
-        border-radius: 40px;
-        color: white;
-        font-family: 'Fredoka One', cursive;
-    }
-    [data-testid="stButton"] button[kind="primary"]:hover {
-        background: #FF66A3;
-        box-shadow: 0 8px 20px rgba(255,102,163,0.8);
-        transform: scale(1.05);
+    img, div[data-testid="stImage"] > img {
+        border-radius: 15px !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -280,11 +202,7 @@ def main():
     if 'processing_done' not in st.session_state:
         st.session_state.processing_done = False
         
-    # Try to set the Hello Kitty background
-    try:
-        set_bg(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hello_kitty_bg.png'))
-    except Exception as e:
-        pass
+
         
     st.title("👕 Clothes Resale Agent UI")
     st.markdown("Test the **Background Remover** and **Inventory Ingestion Agent** in one simple workflow.")

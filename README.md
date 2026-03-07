@@ -66,3 +66,20 @@ Pivot your images to a clean, professional look with the zero-cost background re
     ```
     
     This will create an `output` folder containing the processed image with a solid white background.
+
+## Development Progress
+
+### ✅ Phase 1: Core AI & Processing Prototype
+- **Inventory Ingestion Agent:** Successfully configured Gemini to extract strict JSON metadata, detect defects, and categorize items.
+- **Background Removal:** Implemented a zero-cost local background remover (`rembg`) to sanitize raw clothing photos.
+- **Price Prediction & Copywriting:** Added AI capabilities to estimate fast-sale/market-value prices and generate platform-specific drafts (Poshmark, eBay, Mercari, Vestiaire, Fashionphile).
+- **Streamlit MVP (Deprecated):** Built a monolithic Streamlit UI to test the ingestion pipeline end-to-end and export to `inventory.csv`.
+
+### ✅ Phase 2: Decoupled Architecture (Backend)
+- **FastAPI Migration:** Stripped out the Streamlit UI and converted the core logic to a lightning-fast, headless FastAPI backend (`api.py`).
+- **REST Endpoint:** Established `POST /process-item` to seamlessly handle image uploads, routing, AI processing, and CSV database saves.
+- **CORS Configured:** Prepared the backend for cross-origin requests from the upcoming frontend.
+
+### 🚧 Phase 3: Decoupled Architecture (Frontend)
+- **Next Steps:** Build a beautiful, modern React application for the frontend.
+- **Goal:** Connect the React frontend to the FastAPI backend (`/process-item`) to provide a seamless, premium, mobile-friendly user experience.

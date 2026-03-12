@@ -1,57 +1,55 @@
+
+
 import os
-import sys
-from PIL import Image
 from rembg import remove
+from PIL import Image
+import io
 
-def process_image(input_path, output_folder="output"):
-    """
-    Removes the background from an image, replaces it with white, and saves it.
+def process_image(original_filepath, output_folder="output"):
+    print("\n" + "🎀" * 15)
+    print("Loopy 的魔法工作间：正在全力抠图中... 诶嘿嘿～")
     
-    Args:
-        input_path (str): Path to the original image.
-        output_folder (str): Directory to save the processed image.
-    """
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-
-    filename = os.path.basename(input_path)
-    name, ext = os.path.splitext(filename)
-    output_path = os.path.join(output_folder, f"{name}_processed.jpg")
+    file_name = os.path.basename(original_filepath)
+    file_name_no_ext = os.path.splitext(file_name)[0]
+    processed_filepath = os.path.join(output_folder, f"{file_name_no_ext}_processed.jpg")
 
     try:
-        print(f"Processing: {input_path}...")
-        
-        # 1. Load Original Image
-        original = Image.open(input_path)
-        
-        # 2. Remove Background (returns RGBA)
-        print("  - Removing background...")
-        removed_bg = remove(original)
-        
-        # 3. Create Solid White Background
-        # Create a white image of the same size
-        white_bg = Image.new("RGB", original.size, (255, 255, 255))
-        
-        # 4. Composite
-        # Paste the cutout onto the white background using the alpha channel as a mask
-        print("  - Applying white background...")
-        white_bg.paste(removed_bg, mask=removed_bg.split()[3]) # Use alpha channel as mask
-        
-        # 5. Save
-        white_bg.save(output_path, "JPEG", quality=95)
-        print(f"Done! Saved to: {output_path}")
-        return output_path
+        with open(original_filepath, "rb") as i:
+            input_data = i.read()
+            # 施展抠图魔法
+            output_data = remove(input_data)
+            
+            # 检查输出是否为空
+            if not output_data or len(output_data) < 100:
+                print("⚠️ Loopy 没看清衣服在哪，决定先用原图处理...")
+                img = Image.open(original_filepath)
+            else:
+                img = Image.open(io.BytesIO(output_data))
+
+            # 如果图片是带透明度的 (RGBA)，我们要把它放在白底上
+            if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
+                # 创建一个纯白背景
+                white_bg = Image.new("RGB", img.size, (255, 255, 255))
+                # 如果是 RGBA，使用 alpha 通道作为遮罩
+                if img.mode == 'RGBA':
+                    white_bg.paste(img, (0, 0), img)
+                else:
+                    white_bg.paste(img, (0, 0))
+                img = white_bg
+            else:
+                img = img.convert('RGB')
+
+            # 最终保存
+            img.save(processed_filepath, "JPEG", quality=95)
+            
+        print(f"✅ 魔法成功！白底图已存好: {processed_filepath}")
+        return processed_filepath
 
     except Exception as e:
-        print(f"Error processing {input_path}: {e}", file=sys.stderr)
-        return None
-
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python src/background_remover.py <path_to_image> [output_folder]")
-        sys.exit(1)
-        
-    img_path = sys.argv[1]
-    out_dir = sys.argv[2] if len(sys.argv) > 2 else "output"
-    
-    process_image(img_path, out_dir)
+        print(f"❌ Loopy 尽力了，但魔法还是失灵了: {e}")
+        # 如果彻底失败，把原图复制过去充当处理后的图，防止后端卡死
+        try:
+            shutil.copy(original_filepath, processed_filepath)
+            return processed_filepath
+        except:
+            return None

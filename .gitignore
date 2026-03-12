@@ -25,3 +25,8 @@ env/
 
 # Application Output
 output/
+
+# Frontend build output
+frontend/dist/
+frontend/.vite/
+Miniconda3-latest-MacOSX-x86_64.sh

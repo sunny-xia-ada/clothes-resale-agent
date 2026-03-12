@@ -1,244 +1,183 @@
+
+# import os
+# from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+# from fastapi.middleware.cors import CORSMiddleware
+# import shutil
+# import json
+# import re
+# from google import genai
+# from google.genai import types
+# from background_remover import process_image
+
+# import os
+# import sys
+
+# # 🎀 强行指路：告诉 Python 去 src 文件夹找东西
+# sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+
+# from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+# # ... 后面保持不变 ...
+# from background_remover import process_image
+
+# app = FastAPI()
+
+# # 允许跨域
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+# # 初始化新版客户端
+# client = genai.Client(api_key="AIzaSyBhCh685tIPX-CKBRjCk3flOmMM5UaVeMM")
+
+# @app.post("/process-item")
+# async def process_item(
+#     file: UploadFile = File(...),
+#     brand_tier: str = Form(...)
+# ):
+#     # 1. 保存原图
+#     os.makedirs("output", exist_ok=True)
+#     input_path = f"output/{file.filename}"
+#     with open(input_path, "wb") as buffer:
+#         shutil.copyfileobj(file.file, buffer)
+
+#     # 2. 抠图魔法 (Loopy 变白底图)
+#     processed_path = process_image(input_path)
+#     if not processed_path:
+#         processed_path = input_path # 兜底用原图
+
+#     # 3. 让 Gemini 分析 (使用新版 SDK 语法)
+#     try:
+#         # 上传文件到 Google 服务器（Gemini 1.5 处理图片更准）
+#         with open(processed_path, "rb") as f:
+#             image_data = f.read()
+
+#         prompt = f"""
+#         你现在是 XYLAB 的首席奢侈品鉴定师 Loopy。
+#         请分析这张图中的时尚单品（品牌层级: {brand_tier}）。
+        
+#         必须返回严格的 JSON 格式，不要包含任何 Markdown 标记或文字说明。格式如下：
+#         {{
+#             "pricing": {{
+#                 "fastSale": 120,
+#                 "marketValue": 150,
+#                 "currency": "USD"
+#             }},
+#             "descriptions": {{
+#                 "poshmark": "文案内容",
+#                 "ebay": "文案内容",
+#                 "mercari": "文案内容",
+#                 "depop": "文案内容"
+#             }},
+#             "itemDetails": {{
+#                 "brand": "识别出的品牌",
+#                 "category": "类别",
+#                 "condition": "Excellent"
+#             }}
+#         }}
+#         """
+
+#         response = client.models.generate_content(
+#             model="gemini-1.5-flash", # 或者 gemini-1.5-flash
+#             contents=[
+#                 types.Content(
+#                     role="user",
+#                     parts=[
+#                         types.Part.from_bytes(data=image_data, mime_type="image/jpeg"),
+#                         types.Part.from_text(text=prompt),
+#                     ],
+#                 ),
+#             ],
+#         )
+
+#         # 4. 强力 JSON 清洗逻辑
+#         raw_text = response.text
+#         # 去掉 ```json 和 ``` 标记
+#         json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
+#         if json_match:
+#             result = json.loads(json_match.group())
+#         else:
+#             raise ValueError("AI 没有返回正确的 JSON 格式")
+
+#         # 确保图片路径返回给前端
+#         result["processedImage"] = f"http://localhost:8000/{processed_path}"
+        
+#         return result
+
+#     except Exception as e:
+#         print(f"❌ 后厨出事了: {e}")
+#         raise HTTPException(status_code=500, detail=str(e))
+
+# # 挂载静态文件，让前端能看到图
+# from fastapi.staticfiles import StaticFiles
+# app.mount("/output", StaticFiles(directory="output"), name="output")
+
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
 import os
-import sys
-import json
-import csv
-import shutil
-import base64
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from PIL import Image
-from dotenv import load_dotenv
+from fastapi.staticfiles import StaticFiles
+import json
 
-import google.generativeai as genai
+app = FastAPI()
 
-# Import project modules
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from src.background_remover import process_image
-
-load_dotenv()
-
-app = FastAPI(title="Clothes Resale API", description="Headless backend for processing clothing resale inventory")
-
-# Add CORS middleware for the future React frontend
+# 允许跨域，方便前端调试
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-def load_prompt(file_path):
-    try:
-        with open(file_path, "r") as f:
-            return f.read()
-    except FileNotFoundError:
-        raise HTTPException(status_code=500, detail=f"Prompt file not found at {file_path}")
-
-def analyze_image_with_gemini(image_path, api_key):
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
-    
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    system_prompt_path = os.path.join(base_dir, "prompts", "inventory_ingestion.md")
-    task_prompt_path = os.path.join(base_dir, "prompts", "inventory_extraction_task.md")
-    
-    system_prompt = load_prompt(system_prompt_path)
-    task_prompt = load_prompt(task_prompt_path)
-    
-    try:
-        img = Image.open(image_path)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to load image for analysis: {e}")
-        
-    inputs = [system_prompt, task_prompt, img, "Generate the JSON output based on the provided image(s)."]
-    
-    try:
-        response = model.generate_content(inputs)
-        text_response = response.text.strip()
-        if text_response.startswith("```json"):
-            text_response = text_response[7:]
-        if text_response.endswith("```"):
-            text_response = text_response[:-3]
-        return text_response.strip()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error analyzing image with Gemini: {e}")
-
-def predict_price_with_gemini(extracted_json, api_key):
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
-    
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    prompt_path = os.path.join(base_dir, "prompts", "price_prediction.md")
-    system_prompt = load_prompt(prompt_path)
-    
-    try:
-        parsed_data = json.loads(extracted_json)
-        basics = parsed_data.get("basics", {})
-        condition_data = parsed_data.get("condition", {})
-        
-        brand = basics.get("brand", "Unknown") if isinstance(basics, dict) else "Unknown"
-        category = basics.get("category", "Unknown") if isinstance(basics, dict) else "Unknown"
-        
-        if isinstance(condition_data, dict):
-            condition = condition_data.get("grade", "Unknown")
-        else:
-            condition = str(condition_data)
-            
-        input_data = f"Brand: {brand}\\nCategory: {category}\\nCondition: {condition}"
-        inputs = [system_prompt, input_data]
-        
-        response = model.generate_content(inputs)
-        text_response = response.text.strip()
-        if text_response.startswith("```json"):
-            text_response = text_response[7:]
-        if text_response.endswith("```"):
-            text_response = text_response[:-3]
-        return text_response.strip()
-    except Exception as e:
-        print(f"Error predicting price: {e}")
-        return None
-
-def generate_copywriting_with_gemini(extracted_json, api_key, is_luxury):
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
-    
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    prompt_path = os.path.join(base_dir, "prompts", "platform_copywriting.md")
-    system_prompt = load_prompt(prompt_path)
-    
-    try:
-        routing_instruction = ""
-        if is_luxury:
-            routing_instruction = "\n\nIMPORTANT: Since this is a Luxury/Designer brand, generate ALL 5 descriptions: Poshmark, eBay, Mercari, Vestiaire Collective, and Fashionphile."
-        else:
-            routing_instruction = "\n\nIMPORTANT: Since this is NOT a Luxury/Designer brand, ONLY generate Poshmark, eBay, and Mercari descriptions. Omit Vestiaire Collective and Fashionphile from the JSON entirely."
-            
-        inputs = [system_prompt + routing_instruction, f"JSON Data: {extracted_json}"]
-        
-        response = model.generate_content(inputs)
-        text_response = response.text.strip()
-        if text_response.startswith("```json"):
-            text_response = text_response[7:]
-        if text_response.endswith("```"):
-            text_response = text_response[:-3]
-        return text_response.strip()
-    except Exception as e:
-        print(f"Error generating copywriting: {e}")
-        return None
-
-def flatten_and_save_data(extracted_json, price_json, copy_json, orig_path, proc_path):
-    try:
-        data = json.loads(extracted_json) if extracted_json else {}
-        price_data = json.loads(price_json) if price_json else {}
-        copy_data = json.loads(copy_json) if copy_json else {}
-        
-        flat = {}
-        for section in ["basics", "visuals", "condition"]:
-            for k, v in data.get(section, {}).items():
-                if isinstance(v, list):
-                    flat[f"{section}_{k}"] = ", ".join([str(i) for i in v])
-                else:
-                    flat[f"{section}_{k}"] = v
-                    
-        mkt = data.get("marketing", {})
-        flat["marketing_keywords"] = ", ".join(mkt.get("keywords", []))
-        flat["marketing_occasions"] = ", ".join(mkt.get("suggested_occasions", []))
-        
-        flat["fast_sale_price"] = price_data.get("fast_sale_price", "")
-        flat["market_value_price"] = price_data.get("market_value_price", "")
-        
-        flat["poshmark_desc"] = copy_data.get("poshmark_description", "")
-        flat["ebay_desc"] = copy_data.get("ebay_description", "")
-        flat["mercari_desc"] = copy_data.get("mercari_description", "")
-        flat["vestiaire_desc"] = copy_data.get("vestiaire_description", "")
-        flat["fashionphile_desc"] = copy_data.get("fashionphile_description", "")
-        
-        flat["original_image_path"] = orig_path
-        flat["processed_image_path"] = proc_path
-        
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        csv_file = os.path.join(base_dir, "inventory.csv")
-        file_exists = os.path.isfile(csv_file)
-        
-        with open(csv_file, 'a', newline='', encoding='utf-8') as f:
-            headers = list(flat.keys())
-            writer = csv.DictWriter(f, fieldnames=headers)
-            if not file_exists:
-                writer.writeheader()
-            writer.writerow(flat)
-            
-        return True
-    except Exception as e:
-        print(f"Error saving to CSV: {e}")
-        return False
+# 🎀 挂载 output 文件夹，确保前端能通过 http://localhost:8000/output/xxx 访问到图
+app.mount("/output", StaticFiles(directory="output"), name="output")
 
 @app.post("/process-item")
 async def process_item(
     file: UploadFile = File(...),
-    is_luxury: bool = Form(False),
-    api_key: str = Form(None)
+    brand_tier: str = Form(...)
 ):
-    actual_api_key = api_key or os.getenv("GEMINI_API_KEY")
-    if not actual_api_key:
-        raise HTTPException(status_code=400, detail="Gemini API Key is required")
-        
-    os.makedirs("output", exist_ok=True)
-    file_name = file.filename if file.filename else "upload.jpg"
-    original_filepath = os.path.join("output", file_name)
-    
-    with open(original_filepath, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-        
-    # 1. Background removal
-    processed_img_path = process_image(original_filepath, output_folder="output")
-    if not processed_img_path or not os.path.exists(processed_img_path):
-        raise HTTPException(status_code=500, detail="Background removal failed")
-        
-    # 2. Extract Data
-    json_data = analyze_image_with_gemini(processed_img_path, actual_api_key)
-    if not json_data:
-        raise HTTPException(status_code=500, detail="Failed to extract data")
-        
-    # 3. Predict Price
-    price_json = predict_price_with_gemini(json_data, actual_api_key)
-    
-    # 4. Copywriting
-    copy_json = generate_copywriting_with_gemini(json_data, actual_api_key, is_luxury)
-    
-    # Parse for proper JSON output response
     try:
-        parsed_data = json.loads(json_data)
-        parsed_price = json.loads(price_json) if price_json else {}
-        parsed_copy = json.loads(copy_json) if copy_json else {}
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="Error parsing JSON from language model")
-        
-    # Save to CSV
-    success = flatten_and_save_data(json_data, price_json, copy_json, original_filepath, processed_img_path)
-    
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to save data to CSV pipeline")
-        
-    return {
-        "status": "success",
-        "message": "Item processed and added to inventory.",
-        "data": {
-            "extracted": parsed_data,
-            "pricing": parsed_price,
-            "copywriting": parsed_copy,
-            "paths": {
-                "original": original_filepath,
-                "processed": processed_img_path
-            }
-        }
-    }
+        # 1. 模拟处理延迟（让你能看两秒 Loopy 的优雅视频，调 UI 必备）
+        # 如果追求极致速度，可以把下面这行注释掉
+        import time
+        time.sleep(2) 
 
-@app.get("/health")
-def health_check():
-    return {"status": "ok"}
+        # 2. 🎀 UI 调试核心：直接指向你 output 文件夹里那张完美的白底图
+        # 请确保 output 文件夹里确实有这张图，或者改成你现有的文件名
+        mock_processed_image = "http://localhost:8000/output/IMG_8842_processed.jpg"
+
+        # 3. 返回一套完美的“名媛级” Mock 数据
+        return {
+            "pricing": {
+                "fastSale": 850,
+                "marketValue": 1200,
+                "currency": "USD"
+            },
+            "descriptions": {
+                "poshmark": "✨ [XYLAB SELECT] Rare find! This piece perfectly embodies the STANCE CORE aesthetic. Immaculate condition, professionally authenticated. 🎀",
+                "ebay": "Authentic Luxury Item. Excellent pre-owned condition. Ships with original dustbag. Part of the XYLAB premium resale collection.",
+                "mercari": "Super cute and high-end! ✨ Only worn twice. Open to reasonable offers from fellow Loopy fans! 🎀",
+                "depop": "Vintage luxury vibes. Stance core style. 100% authentic. DM for world wide shipping! 💎 #XYLAB #Luxe"
+            },
+            "itemDetails": {
+                "brand": "Designer Luxury",
+                "category": "High-End Accessory",
+                "condition": "Pristine / Like New"
+            },
+            "processedImage": mock_processed_image
+        }
+
+    except Exception as e:
+        print(f"❌ UI Mock Server 出错了: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

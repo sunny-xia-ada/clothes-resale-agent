@@ -1,85 +1,178 @@
-# Clothes Resale Agent
+# 💍 XYLAB Luxe Resale Agent
 
-This repository contains the code and configuration for the **Clothes Resale Agent**, an AI-powered system designed to automate the ingestion and processing of clothing inventory for a high-volume resale business.
+> **An AI-powered full-stack web app for premium clothing resale.** Upload a photo, get an instant professional price appraisal, platform-specific listing copy, and a clean white-background product image — all in seconds.
 
-## Core Components
+---
 
-### Inventory Ingestion Agent
-The **Inventory Ingestion Agent** is responsible for converting unstructured images of clothing (front, back, tags) into structured JSON data.
+## ✨ What It Does
 
-**Key Capabilities:**
--   **Metadata Extraction:** accurate extraction of brand, size, material, and style.
--   **Defect Detection:** Identification of pilling, stains, and other imperfections.
--   **Structured Output:** Generates strictly formatted JSON data for downstream processing.
+| Feature | Description |
+|---|---|
+| 🖼️ **Background Removal** | Strips messy backgrounds and replaces with clean white using `rembg` (runs 100% locally, zero cost) |
+| 🤖 **AI Appraisal** | Google Gemini analyzes the item and returns fast-sale price, market value, brand, category, and condition |
+| 📝 **Listing Copywriter** | Auto-generates platform-optimized descriptions for Poshmark, eBay, Mercari, and Depop |
+| 💅 **XYLAB UI** | Beautiful pink-themed mobile-friendly React interface with Loopy loading animations |
+| 📦 **Inventory Tracking** | Saves processed items to `inventory.csv` for easy tracking |
 
-See [prompts/inventory_ingestion.md](prompts/inventory_ingestion.md) for the detailed system role and rules.
-### Visual Merchandiser Agent
-The **Visual Merchandiser Agent** specializes in Virtual Try-On (VTON) visualization.
+---
 
-**Key Capabilities:**
--   **Style Analysis:** Analyzes garment style to determine appropriate model and setting.
--   **VTON Generation:** Generates photorealistic on-model images using external tools.
--   **Contextual Styling:** Matches background and vibe to the specific garment type.
+## 🏗️ Architecture
 
-See [prompts/visual_merchandiser.md](prompts/visual_merchandiser.md) for the detailed system role.
-
-## Setup
-
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/Yidan-Xia_NordTech/clothes-resale-agent.git
-    cd clothes-resale-agent
-    ```
-
-2.  **Install dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-3.  **Configure API Key:**
-    - Copy `.env.example` to `.env`:
-      ```bash
-      cp .env.example .env
-      ```
-    - Open `.env` and paste your Google Gemini API key:
-      ```
-      GEMINI_API_KEY=your_actual_api_key
-      ```
-
-## Usage
-
-Run the agent script by providing the path to one or more clothing images:
-
-```bash
-python src/main.py path/to/image.jpg
+```
+clothes-resale-agent/
+├── api.py                  # FastAPI backend (POST /process-item)
+├── src/
+│   └── background_remover.py  # rembg image processing
+├── prompts/                # Gemini system prompts
+│   ├── inventory_ingestion.md
+│   └── visual_merchandiser.md
+├── output/                 # Processed images saved here
+├── inventory.csv           # Running inventory database
+└── frontend/               # React + TypeScript + Tailwind UI
+    └── src/
+        ├── App.tsx         # Main app with upload → processing → results flow
+        └── components/
+            └── resale-agent/
+                ├── upload-zone.tsx
+                ├── brand-tier-toggle.tsx
+                ├── image-comparison.tsx
+                ├── pricing-card.tsx
+                ├── description-accordions.tsx
+                └── floating-cta.tsx
 ```
 
-The script will output the structural JSON data to the console.
+---
 
-### Background Removal Tool
+## 🛠️ Tech Stack
 
-Pivot your images to a clean, professional look with the zero-cost background remover.
+**Backend**
+- [FastAPI](https://fastapi.tiangolo.com/) — REST API
+- [Google Gemini](https://ai.google.dev/) (`gemini-2.0-flash`) — AI vision & copywriting
+- [rembg](https://github.com/danielgatis/rembg) — Local background removal
+- [Pillow](https://python-pillow.org/) — Image processing
 
-1.  **Run the tool:**
-    ```bash
-    python src/background_remover.py path/to/raw_image.jpg
-    ```
-    
-    This will create an `output` folder containing the processed image with a solid white background.
+**Frontend**
+- [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) + [Vite](https://vitejs.dev/)
+- [Tailwind CSS](https://tailwindcss.com/) with custom XYLAB pink color system
+- [shadcn/ui](https://ui.shadcn.com/) component primitives
+- [Lucide React](https://lucide.dev/) icons
 
-## Development Progress
+---
 
-### ✅ Phase 1: Core AI & Processing Prototype
-- **Inventory Ingestion Agent:** Successfully configured Gemini to extract strict JSON metadata, detect defects, and categorize items.
-- **Background Removal:** Implemented a zero-cost local background remover (`rembg`) to sanitize raw clothing photos.
-- **Price Prediction & Copywriting:** Added AI capabilities to estimate fast-sale/market-value prices and generate platform-specific drafts (Poshmark, eBay, Mercari, Vestiaire, Fashionphile).
-- **Streamlit MVP (Deprecated):** Built a monolithic Streamlit UI to test the ingestion pipeline end-to-end and export to `inventory.csv`.
+## 🚀 Getting Started
 
-### ✅ Phase 2: Decoupled Architecture (Backend)
-- **FastAPI Migration:** Stripped out the Streamlit UI and converted the core logic to a lightning-fast, headless FastAPI backend (`api.py`).
-- **REST Endpoint:** Established `POST /process-item` to seamlessly handle image uploads, routing, AI processing, and CSV database saves.
-- **CORS Configured:** Prepared the backend for cross-origin requests from the upcoming frontend.
+### 1. Clone & install backend dependencies
 
-### 🚧 Phase 3: Decoupled Architecture (Frontend)
-- **Next Steps:** Build a beautiful, modern React application for the frontend.
-- **Goal:** Connect the React frontend to the FastAPI backend (`/process-item`) to provide a seamless, premium, mobile-friendly user experience.
+```bash
+git clone https://github.com/sunny-xia-ada/clothes-resale-agent.git
+cd clothes-resale-agent
+pip install -r requirements.txt
+```
+
+### 2. Configure your Gemini API key
+
+Create a `.env` file in the project root:
+
+```bash
+GEMINI_API_KEY=your_actual_gemini_api_key_here
+```
+
+> Get a free API key at [aistudio.google.com](https://aistudio.google.com/app/apikey)
+
+### 3. Start the backend
+
+```bash
+uvicorn api:app --reload --port 8000
+```
+
+### 4. Start the frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+---
+
+## 📡 API Reference
+
+### `POST /process-item`
+
+Uploads an image and returns AI analysis.
+
+**Request** — `multipart/form-data`
+
+| Field | Type | Description |
+|---|---|---|
+| `file` | `File` | Clothing image (JPEG/PNG) |
+| `brand_tier` | `string` | `"luxury/designer"` or `"regular"` |
+
+**Response** — `application/json`
+
+```json
+{
+  "pricing": {
+    "fastSale": 850,
+    "marketValue": 1200,
+    "currency": "USD"
+  },
+  "descriptions": {
+    "poshmark": "...",
+    "ebay": "...",
+    "mercari": "...",
+    "depop": "..."
+  },
+  "itemDetails": {
+    "brand": "Gucci",
+    "category": "Handbag",
+    "condition": "Excellent"
+  },
+  "processedImage": "http://localhost:8000/output/item_processed.jpg"
+}
+```
+
+---
+
+## 📈 Development Progress
+
+### ✅ Phase 1 — AI & Processing Core
+- Gemini prompt engineering for structured JSON metadata extraction
+- Local background removal with `rembg` (zero API cost)
+- Price prediction and platform-specific copywriting
+- Initial Streamlit MVP for pipeline validation
+
+### ✅ Phase 2 — Backend (FastAPI)
+- Migrated to headless FastAPI service
+- `POST /process-item` endpoint with image upload, AI routing, and CSV persistence
+- Static file serving for processed output images
+- CORS configured for frontend integration
+
+### ✅ Phase 3 — Frontend (React)
+- Full React + TypeScript + Vite frontend
+- XYLAB pink design system with custom Tailwind tokens
+- Upload → Processing (Loopy animation) → Results flow
+- Pricing card, image comparison, description accordions
+- Error states with personality-driven Loopy error messages
+- Mobile-first responsive layout
+
+### 🚧 Phase 4 — In Progress
+- Real Gemini AI integration (currently in mock/UI dev mode)
+- User authentication and multi-user inventory
+- Export to Poshmark / eBay draft listings via API
+
+---
+
+## 🔒 Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `GEMINI_API_KEY` | ✅ | Google Gemini API key |
+
+---
+
+## 📄 License
+
+MIT — built with 💍 by XYLAB
